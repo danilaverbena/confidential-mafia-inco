@@ -51,9 +51,35 @@ PLAN.md           Full strategy/architecture writeup.
 - [x] `ConfidentialMafia.sol` written and **compiles** against
       `@inco/lightning@1.0.2` (`cd contracts && npm run compile`).
 - [ ] Local end-to-end test against the covalidator (`npm run node:up && npm run test:local`).
-- [ ] Deploy to Base Sepolia.
-- [ ] Telegram Mini App wired to the deployed contract.
-- [ ] Backend orchestrator wired to real contract events + Gemini + Telegram bot.
+- [ ] Deploy to Base Sepolia -- blocked on funding the deployer address
+      (see below).
+- [x] Telegram Mini App **deployed**: https://confidential-mafia-inco.vercel.app
+      (bootstrapped from `contracts/frontend`; `app/mafia` still targets the
+      upstream roles-only `Mafia.sol`, not yet re-pointed at
+      `ConfidentialMafia`).
+- [x] Telegram bot menu button wired to the live Mini App
+      (`@incoprotocol_bot`, "Play Mafia").
+- [ ] Backend orchestrator wired to real contract events + Gemini + Telegram
+      chat (code scaffolded in `backend/`, not yet run continuously).
+
+### Still needed from you
+
+- **Fund the deployer address** `0xddA9Ff9c37c40DE11ED014679d60cf8fC8FEe480`
+  with Base Sepolia ETH (e.g. https://www.alchemy.com/faucets/base-sepolia),
+  then run `cd contracts && npm run deploy:confidential-mafia:testnet`.
+- **Gemini API key** -- add to `backend/.env` (`GEMINI_API_KEY`).
+- **Telegram chat ID** for the game group -- add to `backend/.env`
+  (`TELEGRAM_CHAT_ID`).
+- **WalletConnect Project ID** (free, cloud.walletconnect.com) -- the live
+  Mini App currently runs on a placeholder value in Vercel's project env
+  vars, so wallet connect will not work until this is set for real.
+- Vercel note: a git-linked redeploy got blocked by team policy
+  ("Git author ... must have access to the team Danyla's projects") after
+  `vercel link` auto-attached the GitHub repo. The **first** deploy (live
+  now) went through fine as a direct CLI upload. To allow future
+  git-triggered deploys, either invite the relevant GitHub-linked account to
+  the Danyla's projects Vercel team, or disconnect the project's Git
+  Integration and keep deploying via `vercel deploy --prod` from the server.
 
 ## Quickstart (contracts)
 
