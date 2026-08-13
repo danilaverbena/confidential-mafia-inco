@@ -1,3 +1,0 @@
-// TODO: call `myRoleHandle()`, then peekMyCards(zap, wallet, [handle]) from
-// incoDeckClient to decrypt locally. Show "You are Mafia / Doctor / Villager".
-// This value must never be sent to the backend, Gemini, or any other player.

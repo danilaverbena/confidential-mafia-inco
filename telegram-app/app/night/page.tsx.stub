@@ -1,3 +1,0 @@
-// TODO: identical UI for every role. Let the player pick a target index and
-// call `submitNightAction(targetIndex)`. Do not branch the UI on the local
-// role value -- that's what keeps the action shape uniform on-chain.
