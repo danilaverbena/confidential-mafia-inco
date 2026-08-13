@@ -60,25 +60,33 @@ PLAN.md           Full strategy/architecture writeup.
       `ConfidentialMafia`).
 - [x] Telegram bot menu button wired to the live Mini App
       (`@incoprotocol_bot`, "Play Mafia").
-- [ ] Backend orchestrator wired to real contract events + Gemini + Telegram
-      chat (code scaffolded in `backend/`, not yet run continuously).
+- [x] Backend orchestrator **live** on the server: watches
+      `ConfidentialMafia` on Base Sepolia, narrates public events via
+      Gemini, posts to the "IncoNetwork" Telegram group. Verified
+      end-to-end with a real `join()` tx -- see `backend/src/index.ts` +
+      `backend/src/eventMapper.ts`.
 
 ### Still needed from you
 
-- **Telegram chat ID** for the game group -- add to `backend/.env`
-  (`TELEGRAM_CHAT_ID`). Add `@incoprotocol_bot` to the group, send any
-  message, then read it back from
-  `https://api.telegram.org/bot<token>/getUpdates`.
 - `app/mafia` in `telegram-app` still targets the upstream, roles-only
   `Mafia.sol`. Re-point it at the deployed `ConfidentialMafia` address
-  above (new ABI already in `backend/abi/ConfidentialMafia.json` and
-  `contracts/artifacts/.../ConfidentialMafia.json`) and build the
+  above (ABI in `backend/abi/ConfidentialMafia.json`, regenerate from
+  `contracts/artifacts/...` if the contract changes) and build the
   night/day screens per PLAN.md section 5.
 - The contract has **no Base Sepolia ETH pre-funded for the shuffle fee**
   yet -- send some ETH to
   `0x6376083c809EdC04ebBB69038AA999C1B4fE755D` (it has a `receive()`)
   before calling `assignRoles()`, or fund it programmatically in the
   frontend flow.
+- The deployed contract already has **1 test player joined** (the deployer
+  address, used to verify the orchestrator end-to-end). Either `reset()`
+  isn't available yet (only works from `GameOver`), so treat this
+  deployment as a pipeline-test instance and deploy a fresh
+  `ConfidentialMafia` for the real first game, or just add real players
+  on top -- one extra test seat doesn't block anything.
+- The orchestrator (`backend`) is running via `npm run dev` in the
+  background on the server (not a managed service yet -- wrap it in
+  `pm2`/`systemd` before relying on it long-term).
 - **WalletConnect Project ID** (free, cloud.walletconnect.com) -- the live
   Mini App currently runs on a placeholder value in Vercel's project env
   vars, so wallet connect will not work until this is set for real.
