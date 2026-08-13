@@ -62,9 +62,19 @@ PLAN.md           Full strategy/architecture writeup.
       (`@incoprotocol_bot`, "Play Mafia").
 - [x] Backend orchestrator **live** on the server: watches
       `ConfidentialMafia` on Base Sepolia, narrates public events via
-      Gemini, posts to the "IncoNetwork" Telegram group. Verified
-      end-to-end with a real `join()` tx -- see `backend/src/index.ts` +
-      `backend/src/eventMapper.ts`.
+      Gemini, posts to the "IncoNetwork" Telegram group.
+- [x] **Full round-1 flow verified live on Base Sepolia**, not just
+      compiled: 3 wallets joined, `assignRoles()` ran a real Inco
+      `shuffledRange` + 3x `_dealTo`, emitting `DeckShuffled`,
+      `CardDealt` x3, `RolesAssigned(players=3, mafia=1)`, and the
+      automatic `NightStarted(round=0)`. The orchestrator picked up every
+      event, correctly narrated only the player-facing ones (joins, roles
+      assigned, night started) and silently skipped the low-level deck
+      events, and Gemini's narration landed in Telegram each time. Nobody
+      -- not even someone holding all 3 private keys, as in this test --
+      can tell who the Mafia is from any of this; that requires each
+      wallet individually running `attestedDecrypt` on its own role
+      handle.
 
 ### Still needed from you
 
@@ -78,12 +88,12 @@ PLAN.md           Full strategy/architecture writeup.
   `0x6376083c809EdC04ebBB69038AA999C1B4fE755D` (it has a `receive()`)
   before calling `assignRoles()`, or fund it programmatically in the
   frontend flow.
-- The deployed contract already has **1 test player joined** (the deployer
-  address, used to verify the orchestrator end-to-end). Either `reset()`
-  isn't available yet (only works from `GameOver`), so treat this
-  deployment as a pipeline-test instance and deploy a fresh
-  `ConfidentialMafia` for the real first game, or just add real players
-  on top -- one extra test seat doesn't block anything.
+- The deployed contract has now run a **full test round 1** with 3
+  throwaway wallets (deployer + 2 generated test keys) and is sitting in
+  `Night` state with roles already dealt. `reset()` only works from
+  `GameOver`, so this instance is spent as a real game -- deploy a fresh
+  `ConfidentialMafia` (same `npm run deploy:confidential-mafia:testnet`)
+  before onboarding real players.
 - The orchestrator (`backend`) is running via `npm run dev` in the
   background on the server (not a managed service yet -- wrap it in
   `pm2`/`systemd` before relying on it long-term).
