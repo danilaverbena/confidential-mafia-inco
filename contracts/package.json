@@ -1,0 +1,70 @@
+{
+  "name": "inco-confidential-deck-template",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:local": "hardhat test --network anvil",
+    "test:testnet": "hardhat test --network baseSepolia",
+    "node:up": "docker compose up -d",
+    "node:down": "docker compose down",
+    "deploy:blackjack:local": "hardhat ignition deploy ignition/modules/Blackjack.ts --network anvil",
+    "deploy:war:local": "hardhat ignition deploy ignition/modules/War.ts --network anvil",
+    "deploy:war:testnet": "hardhat ignition deploy ignition/modules/War.ts --network baseSepolia",
+    "deploy:blackjack:testnet": "hardhat ignition deploy ignition/modules/Blackjack.ts --network baseSepolia",
+    "deploy:raffle:local": "hardhat ignition deploy ignition/modules/Raffle.ts --network anvil",
+    "deploy:raffle:testnet": "hardhat ignition deploy ignition/modules/Raffle.ts --network baseSepolia",
+    "deploy:mafia:local": "hardhat ignition deploy ignition/modules/Mafia.ts --network anvil",
+    "deploy:mafia:testnet": "hardhat ignition deploy ignition/modules/Mafia.ts --network baseSepolia",
+    "deploy:examples:testnet": "npm run deploy:war:testnet && npm run deploy:blackjack:testnet && npm run deploy:raffle:testnet && npm run deploy:mafia:testnet",
+    "wire:frontend": "node scripts/wire-frontend.mjs",
+    "deploy:confidential-mafia:local": "hardhat ignition deploy ignition/modules/ConfidentialMafia.ts --network anvil",
+    "deploy:confidential-mafia:testnet": "hardhat ignition deploy ignition/modules/ConfidentialMafia.ts --network baseSepolia"
+  },
+  "devDependencies": {
+    "@inco/lightning-js": "1.0.2",
+    "@nomicfoundation/hardhat-ignition": "^0.15.0",
+    "@nomicfoundation/hardhat-ignition-viem": "^0.15.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
+    "@nomicfoundation/hardhat-toolbox-viem": "^3.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@nomicfoundation/hardhat-viem": "^2.0.0",
+    "@types/chai": "^4.3.20",
+    "@types/chai-as-promised": "^7.1.8",
+    "@types/mocha": "^10.0.10",
+    "@types/node": ">=18.0.0",
+    "chai": "^4.5.0",
+    "hardhat": "^2.22.19",
+    "hardhat-gas-reporter": "^1.0.8",
+    "solidity-coverage": "^0.8.17",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "viem": "^2.43.5"
+  },
+  "dependencies": {
+    "@inco/lightning": "1.0.2",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "^5.4.0",
+    "@openzeppelin/contracts-upgradeable": "^5.4.0",
+    "dotenv": "^17.2.3"
+  },
+  "overrides": {
+    "forge-std": "github:foundry-rs/forge-std#2f05b3001ed9d74b171d17eac80b3765ce186a76",
+    "ds-test": "github:dapphub/ds-test#e282159d5170298eb2455a6c05280ab5a73a4ef0",
+    "@safe-global/safe-smart-account": "github:safe-global/safe-smart-account#dc437e8fba8b4805d76bcbd1c668c9fd3d1e83be"
+  },
+  "resolutions": {
+    "forge-std": "github:foundry-rs/forge-std#2f05b3001ed9d74b171d17eac80b3765ce186a76",
+    "ds-test": "github:dapphub/ds-test#e282159d5170298eb2455a6c05280ab5a73a4ef0",
+    "@safe-global/safe-smart-account": "github:safe-global/safe-smart-account#dc437e8fba8b4805d76bcbd1c668c9fd3d1e83be"
+  },
+  "pnpm": {
+    "overrides": {
+      "forge-std": "github:foundry-rs/forge-std#2f05b3001ed9d74b171d17eac80b3765ce186a76",
+      "ds-test": "github:dapphub/ds-test#e282159d5170298eb2455a6c05280ab5a73a4ef0",
+      "@safe-global/safe-smart-account": "github:safe-global/safe-smart-account#dc437e8fba8b4805d76bcbd1c668c9fd3d1e83be"
+    }
+  },
+  "description": "ConfidentialDeck: reusable Inco primitives for hidden-information games (shuffle, private deal, reveal, attested settle) + worked examples."
+}

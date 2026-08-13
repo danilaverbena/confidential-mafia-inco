@@ -1,0 +1,83 @@
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+/* Terminal palette (navy + electric blue), from the hangman/mines apps.
+   Same values in :root and .dark so it always reads terminal. */
+@layer base {
+  :root,
+  .dark {
+    --background: 222 88% 7%;
+    --foreground: 224 35% 78%;
+    --card: 222 66% 11%;
+    --card-foreground: 224 35% 82%;
+    --popover: 222 66% 11%;
+    --popover-foreground: 224 35% 82%;
+    --primary: 221 91% 59%;
+    --primary-foreground: 222 88% 7%;
+    --secondary: 222 47% 16%;
+    --secondary-foreground: 224 35% 82%;
+    --muted: 222 40% 15%;
+    --muted-foreground: 225 22% 60%;
+    --accent: 221 60% 22%;
+    --accent-foreground: 224 40% 88%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 60% 26%;
+    --input: 220 60% 26%;
+    --ring: 221 91% 59%;
+    --radius: 0;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    background-image: url("/bg-lines.svg");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+::selection {
+  background: hsl(var(--primary) / 0.35);
+}
+
+/* Smooth transitions for interactive elements */
+@layer base {
+  button,
+  input,
+  a {
+    transition-property: color, background-color, border-color, opacity;
+    transition-duration: 150ms;
+    transition-timing-function: ease;
+  }
+}
+
+/* Custom scrollbar for webkit browsers */
+@layer base {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
+}

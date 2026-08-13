@@ -1,0 +1,4 @@
+// TODO (after bootstrapping from ../contracts/frontend):
+// - read `players`, `playerCount`, `state` from ConfidentialMafia
+// - call `join()` via the connected wallet
+// - once state == Assigned, route to /role
