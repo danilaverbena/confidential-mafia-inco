@@ -52,8 +52,9 @@ PLAN.md           Full strategy/architecture writeup.
       `@inco/lightning@1.0.2` (`cd contracts && npm run compile`).
 - [ ] Local end-to-end test against the covalidator (`npm run node:up && npm run test:local`).
 - [x] Deployed to Base Sepolia:
-      `0x6376083c809EdC04ebBB69038AA999C1B4fE755D`
-      (`ConfidentialMafia(mafiaCount=1)`).
+      `0x4A91Cd872ab45A15AB7110583Ae04f2Ca9BafCa3`
+      (`ConfidentialMafia(mafiaCount=1)`; supersedes an earlier
+      `0x6376...` instance used for the first pipeline smoke test).
 - [x] Telegram Mini App **deployed**: https://confidential-mafia-inco.vercel.app
       (bootstrapped from `contracts/frontend`; `app/mafia` still targets the
       upstream roles-only `Mafia.sol`, not yet re-pointed at
@@ -63,16 +64,25 @@ PLAN.md           Full strategy/architecture writeup.
 - [x] Backend orchestrator **live** on the server: watches
       `ConfidentialMafia` on Base Sepolia, narrates public events via
       Gemini, posts to the "IncoNetwork" Telegram group.
-- [x] **Full round-1 flow verified live on Base Sepolia**, not just
-      compiled: 3 wallets joined, `assignRoles()` ran a real Inco
-      `shuffledRange` + 3x `_dealTo`, emitting `DeckShuffled`,
-      `CardDealt` x3, `RolesAssigned(players=3, mafia=1)`, and the
-      automatic `NightStarted(round=0)`. The orchestrator picked up every
-      event, correctly narrated only the player-facing ones (joins, roles
-      assigned, night started) and silently skipped the low-level deck
-      events, and Gemini's narration landed in Telegram each time. Nobody
-      -- not even someone holding all 3 private keys, as in this test --
-      can tell who the Mafia is from any of this; that requires each
+- [x] **A full round played to completion, live on Base Sepolia, with
+      real Inco attestations at every reveal** -- not simulated, not just
+      compiled. 3 wallets joined; `assignRoles()` ran a real Inco
+      `shuffledRange` + 3x `_dealTo`. All 3 submitted a night action.
+      `resolveNightStep1()` folded the encrypted votes down to one
+      (victim, dies) pair and revealed only that. The JS SDK
+      (`@inco/lightning-js`, `zap.attestedReveal`) fetched genuine
+      covalidator-signed values for both handles --
+      `contracts/scripts/resolve-night.ts` -- which `settleNight()`
+      verified on-chain (`e.verifyDecryption`). A Villager had been
+      killed; their role was revealed and settled the same way. With 1
+      Mafia left out of 2 survivors, `_checkWin()` fired
+      `GameEnded(Mafia)` automatically, no separate call needed. Every
+      step's Gemini narration reached the real IncoNetwork Telegram group,
+      including the death and the final result (a couple were sent via
+      `backend/scripts/backfill.ts` after the live watcher was briefly
+      pointed at the wrong -- superseded -- contract address; now fixed).
+      Nobody, not even someone holding all 3 private keys as in this test,
+      could tell who the Mafia was before the reveal -- that requires each
       wallet individually running `attestedDecrypt` on its own role
       handle.
 
@@ -88,12 +98,24 @@ PLAN.md           Full strategy/architecture writeup.
   `0x6376083c809EdC04ebBB69038AA999C1B4fE755D` (it has a `receive()`)
   before calling `assignRoles()`, or fund it programmatically in the
   frontend flow.
-- The deployed contract has now run a **full test round 1** with 3
-  throwaway wallets (deployer + 2 generated test keys) and is sitting in
-  `Night` state with roles already dealt. `reset()` only works from
-  `GameOver`, so this instance is spent as a real game -- deploy a fresh
-  `ConfidentialMafia` (same `npm run deploy:confidential-mafia:testnet`)
-  before onboarding real players.
+- The deployed contract has already **played and finished** a full test
+  round (3 throwaway wallets, Mafia won) and is sitting in `GameOver`.
+  `reset()` works from `GameOver`, so it could theoretically be reused,
+  but the 3 seats are throwaway test keys -- deploy a fresh
+  `ConfidentialMafia` (`npm run deploy:confidential-mafia:testnet`) for
+  the real first game with real players.
+- **Infura reliability notes for whoever runs the orchestrator next:**
+  `eth_estimateGas` fails with `StackUnderflow` on any call that touches
+  Inco's precompiles (`settleNight`, `settleNightRole`, ...) -- always
+  pass an explicit `gas` limit and skip estimation. Infura's filter-based
+  `eth_newFilter`/`eth_getFilterChanges` (what viem's
+  `watchContractEvent` uses by default) also hit this project's per-key
+  quota under sustained testing and silently killed the watcher process.
+  Before relying on this for a real game, switch to a paid RPC tier or a
+  transport with a longer polling interval, and consider adding a
+  supervisor (pm2/systemd) that restarts the orchestrator on crash and
+  re-runs `backend/scripts/backfill.ts` on start to catch anything missed
+  while it was down.
 - The orchestrator (`backend`) is running via `npm run dev` in the
   background on the server (not a managed service yet -- wrap it in
   `pm2`/`systemd` before relying on it long-term).
