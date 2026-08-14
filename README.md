@@ -52,13 +52,19 @@ PLAN.md           Full strategy/architecture writeup.
       `@inco/lightning@1.0.2` (`cd contracts && npm run compile`).
 - [ ] Local end-to-end test against the covalidator (`npm run node:up && npm run test:local`).
 - [x] Deployed to Base Sepolia:
-      `0x4A91Cd872ab45A15AB7110583Ae04f2Ca9BafCa3`
-      (`ConfidentialMafia(mafiaCount=1)`; supersedes an earlier
-      `0x6376...` instance used for the first pipeline smoke test).
+      `0x555b5326B2590377DfA3A44C8264ba36a61dBB8a`
+      (`ConfidentialMafia(mafiaCount=1)`). Supersedes two earlier
+      instances (`0x6376...` the first pipeline smoke test,
+      `0x4A91...` before `pendingVictimIndexHandle` /
+      `pendingDeathFlagHandle` / `pendingDeadPlayer` were made public,
+      which the frontend needs to fetch attested reveals).
 - [x] Telegram Mini App **deployed**: https://confidential-mafia-inco.vercel.app
-      (bootstrapped from `contracts/frontend`; `app/mafia` still targets the
-      upstream roles-only `Mafia.sol`, not yet re-pointed at
-      `ConfidentialMafia`).
+      Bootstrapped from `contracts/frontend`. `app/mafia` still targets the
+      upstream roles-only `Mafia.sol` (kept as reference); the real game
+      lives at a new route, `/confidential-mafia`, wired to the deployed
+      `ConfidentialMafia` contract with the full join -> role -> night ->
+      resolve/settle -> day -> resolve/settle -> game-over loop. Builds
+      clean (`npm run build`, TypeScript strict) against the real ABI.
 - [x] Telegram bot menu button wired to the live Mini App
       (`@incoprotocol_bot`, "Play Mafia").
 - [x] Backend orchestrator **live** on the server: watches
@@ -88,47 +94,40 @@ PLAN.md           Full strategy/architecture writeup.
 
 ### Still needed from you
 
-- `app/mafia` in `telegram-app` still targets the upstream, roles-only
-  `Mafia.sol`. Re-point it at the deployed `ConfidentialMafia` address
-  above (ABI in `backend/abi/ConfidentialMafia.json`, regenerate from
-  `contracts/artifacts/...` if the contract changes) and build the
-  night/day screens per PLAN.md section 5.
-- The contract has **no Base Sepolia ETH pre-funded for the shuffle fee**
-  yet -- send some ETH to
-  `0x6376083c809EdC04ebBB69038AA999C1B4fE755D` (it has a `receive()`)
-  before calling `assignRoles()`, or fund it programmatically in the
-  frontend flow.
-- The deployed contract has already **played and finished** a full test
-  round (3 throwaway wallets, Mafia won) and is sitting in `GameOver`.
-  `reset()` works from `GameOver`, so it could theoretically be reused,
-  but the 3 seats are throwaway test keys -- deploy a fresh
-  `ConfidentialMafia` (`npm run deploy:confidential-mafia:testnet`) for
-  the real first game with real players.
-- **Infura reliability notes for whoever runs the orchestrator next:**
-  `eth_estimateGas` fails with `StackUnderflow` on any call that touches
-  Inco's precompiles (`settleNight`, `settleNightRole`, ...) -- always
-  pass an explicit `gas` limit and skip estimation. Infura's filter-based
-  `eth_newFilter`/`eth_getFilterChanges` (what viem's
-  `watchContractEvent` uses by default) also hit this project's per-key
-  quota under sustained testing and silently killed the watcher process.
-  Before relying on this for a real game, switch to a paid RPC tier or a
-  transport with a longer polling interval, and consider adding a
-  supervisor (pm2/systemd) that restarts the orchestrator on crash and
-  re-runs `backend/scripts/backfill.ts` on start to catch anything missed
-  while it was down.
-- The orchestrator (`backend`) is running via `npm run dev` in the
-  background on the server (not a managed service yet -- wrap it in
-  `pm2`/`systemd` before relying on it long-term).
 - **WalletConnect Project ID** (free, cloud.walletconnect.com) -- the live
   Mini App currently runs on a placeholder value in Vercel's project env
-  vars, so wallet connect will not work until this is set for real.
-- Vercel note: a git-linked redeploy got blocked by team policy
-  ("Git author ... must have access to the team Danyla's projects") after
-  `vercel link` auto-attached the GitHub repo. The **first** deploy (live
-  now) went through fine as a direct CLI upload. To allow future
-  git-triggered deploys, either invite the relevant GitHub-linked account to
-  the Danyla's projects Vercel team, or disconnect the project's Git
-  Integration and keep deploying via `vercel deploy --prod` from the server.
+  vars, so wallet connect will not work for real players until this is
+  set. Swap it into the \`NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID\` Vercel env
+  var and redeploy.
+- The current deployment (\`0x555b...\`) is funded (0.0006 ETH) but has
+  **0 players joined** -- it is a clean slate, ready for a real game.
+  Nobody needs to pre-fund anything further for a small game; \`deckFee\`
+  scales with player count and the \`Fund fee\` button in the UI covers it.
+- **Infura reliability notes**, discovered the hard way while testing:
+  \`eth_estimateGas\` fails with \`StackUnderflow\` on any call that touches
+  Inco's precompiles (\`assignRoles\`, \`submitNightAction\`,
+  \`resolveNightStep1\`, \`settleNight\`, \`settleNightRole\`,
+  \`settleDayRole\`) -- both the backend scripts and the frontend now pass
+  an explicit \`gas\` limit on those calls instead of estimating. Infura's
+  filter-based \`eth_newFilter\`/\`eth_getFilterChanges\` also hit this
+  project's quota under sustained testing (\`Payment Required\`), so
+  \`contracts/.env\` and \`backend/.env\` were switched to the public
+  \`https://sepolia.base.org\` endpoint, which in turn doesn't share filter
+  state across its load-balanced nodes (\`filter not found\`). The
+  orchestrator now runs \`watchContractEvent\` with \`poll: true\`, which
+  helps but doesn't fully eliminate this -- see \`backend/src/index.ts\`.
+  Before relying on this for a real game: get a paid/dedicated RPC
+  (Infura or otherwise) and add a supervisor (pm2/systemd) that restarts
+  the orchestrator on crash and re-runs \`backend/scripts/backfill.ts\` on
+  start to catch anything missed while it was down.
+- The orchestrator (\`backend\`) runs via \`npm run dev\` in the background
+  on the server -- not a managed service yet.
+- Vercel note: git-linked redeploys get blocked by team policy (\"Git
+  author ... must have access to the team Danyla's projects\") unless the
+  commit author's email matches an authorized identity on that Vercel
+  team -- this repo's git config now uses the token owner's email for
+  that reason. Direct CLI deploys (\`vercel deploy --prod\`, what's used
+  here) work regardless.
 
 ## Quickstart (contracts)
 
