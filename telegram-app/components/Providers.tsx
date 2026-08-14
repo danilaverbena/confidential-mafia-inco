@@ -24,42 +24,66 @@ const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "";
 
 // Telegram's own "Wallet" (the @wallet bot / Settings > Wallet) runs on TON,
 // not EVM -- it cannot sign transactions for our Base Sepolia contract, so it
-// can't be listed here as a literal connector. What we *can* do to feel native
-// inside the Telegram Mini App webview is put the one connector that
-// actually works there first:
-//   - WalletConnect: deep-links out to the user's mobile wallet app (MetaMask,
-//     Trust, Rainbow, Coinbase Wallet, etc.) and back into Telegram -- the
-//     standard way to connect a real wallet from inside any in-app browser,
-//     Telegram included.
+// can't be listed here as a literal connector. Inside Telegram's own Android
+// webview, only WalletConnect actually works -- every other connector was
+// live-tested and found to hard-fail there, for reasons that can't be
+// configured away:
+//   - metaMaskWallet: @metamask/sdk's mobile deep link (dist/browser/umd/
+//     metamask-sdk.iife.js) does `window.location.href = "metamask://..."`
+//     directly when `useDeeplink` is set, which the browser's `Location`
+//     API doesn't expose a way to intercept/rewrite (unlike `window.open`,
+//     which we *do* patch in TelegramInit.tsx for other cases). Telegram's
+//     webview can't navigate to a non-http(s) scheme this way and fails with
+//     `net::ERR_UNKNOWN_URL_SCHEME`.
+//   - coinbaseWallet: @coinbase/wallet-sdk's `fetchSignerType`
+//     (sign/util.js) unconditionally opens a keys.coinbase.com popup and
+//     waits for a `postMessage` back through `window.opener`, for every
+//     `preference` value ('all' / 'eoaOnly' / 'smartWalletOnly' all still
+//     open the same popup -- preference only changes what's offered inside
+//     it). Telegram's webview never preserves `window.opener` on popups, so
+//     it always fails with "This app doesn't support smart wallets".
+//   - rainbowWallet / trustWallet: same family of custom-scheme /
+//     window.opener assumptions as the two above.
+// WalletConnect (@walletconnect/ethereum-provider) is the one path that's
+// actually Telegram-aware upstream: it detects `window.Telegram` /
+// `window.TelegramWebviewProxy` itself and forces `_blank` navigation
+// instead of `_self`/`location.href`, which Telegram's webview can hand off
+// to the OS correctly -- and it's still how a user reaches MetaMask,
+// Coinbase Wallet, Trust, Rainbow, etc. on mobile, just through WC's pairing
+// URI instead of each wallet's broken native deep link.
 //
-// Coinbase Wallet's *own* connector is NOT in the Telegram group, and this
-// isn't a `preference` setting we can fix: @coinbase/wallet-sdk's
-// `fetchSignerType` (sign/util.js) unconditionally opens a keys.coinbase.com
-// popup and waits for it to `postMessage` back through `window.opener` --
-// this happens for every preference value ('all', 'eoaOnly',
-// 'smartWalletOnly' all still open the popup, they only change what's
-// offered *inside* it). Telegram's Android webview doesn't preserve
-// `window.opener` on that popup, so the flow always fails with "This app
-// doesn't support smart wallets", no matter how it's configured. Coinbase
-// Wallet mobile app is still reachable in Telegram -- just through the
-// WalletConnect button above, which uses real deep links, not a popup.
-// Extension-only connectors (plain injected MetaMask, Rainbow, Trust as
-// browser extensions, and Coinbase Wallet's own popup-based connector) are
-// kept as a secondary group since they only function when the Mini App
-// happens to be opened in a desktop browser tab instead of Telegram's own
-// webview.
+// So: inside Telegram, show ONLY WalletConnect -- the per-wallet buttons are
+// hidden rather than shown-and-broken. Outside Telegram (a normal desktop
+// browser tab, e.g. testing locally), the full wallet list is shown, since
+// browser extensions, popups and custom schemes all work normally there.
+function isInsideTelegram(): boolean {
+  if (typeof window === "undefined") return false;
+  const w = window as unknown as {
+    Telegram?: { WebApp?: unknown };
+    TelegramWebviewProxy?: unknown;
+  };
+  return Boolean(w.Telegram?.WebApp || w.TelegramWebviewProxy);
+}
+
 const connectors = projectId
   ? connectorsForWallets(
-      [
-        {
-          groupName: "Recommended in Telegram",
-          wallets: [walletConnectWallet],
-        },
-        {
-          groupName: "More wallets",
-          wallets: [coinbaseWallet, metaMaskWallet, rainbowWallet, trustWallet],
-        },
-      ],
+      isInsideTelegram()
+        ? [
+            {
+              groupName: "Wallet",
+              wallets: [walletConnectWallet],
+            },
+          ]
+        : [
+            {
+              groupName: "Recommended",
+              wallets: [walletConnectWallet],
+            },
+            {
+              groupName: "More wallets",
+              wallets: [coinbaseWallet, metaMaskWallet, rainbowWallet, trustWallet],
+            },
+          ],
       {
         appName: "Confidential Mafia",
         projectId,
