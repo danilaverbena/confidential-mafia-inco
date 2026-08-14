@@ -115,14 +115,36 @@ PLAN.md           Full strategy/architecture writeup.
 - [x] **Wallet list tuned for the Telegram webview.** Telegram's own
   built-in "Wallet" (Settings > Wallet / \`@wallet\` bot) runs on TON, not
   EVM -- it has no way to sign a Base Sepolia transaction, so it cannot
-  literally appear as a connector here. What *does* work well inside the
-  Mini App's in-app browser is WalletConnect (deep-links out to the
-  user's mobile wallet app and back into Telegram) and Coinbase Wallet's
-  passkey-based Smart Wallet (no extension or separate app needed).
-  \`telegram-app/components/Providers.tsx\` now lists those two first,
-  under "Recommended in Telegram", with MetaMask/Rainbow/Trust as a
-  secondary "More wallets" group for anyone opening the Mini App in a
-  regular desktop browser tab instead.
+  literally appear as a connector here. Two real bugs were found and
+  fixed while getting a real EVM wallet to connect from inside Telegram's
+  Android webview, both live-tested against real errors:
+  - Per-wallet deep links (\`metamask://wc?uri=...\`, etc.) fail with
+    \`net::ERR_UNKNOWN_URL_SCHEME\` because Telegram's webview can only
+    navigate to http(s) URLs. Fixed in
+    \`telegram-app/components/TelegramInit.tsx\`, which patches
+    \`window.open\` to rewrite known wallet custom schemes to their https
+    "universal link" equivalent (e.g.
+    \`https://metamask.app.link/wc?uri=...\`) before opening, letting
+    Android App Links / iOS Universal Links take over.
+  - Coinbase Wallet's own connector cannot work inside Telegram at all,
+    in any configuration: \`@coinbase/wallet-sdk\`'s \`fetchSignerType\`
+    unconditionally opens a \`keys.coinbase.com\` popup and waits for a
+    \`postMessage\` back through \`window.opener\` -- true for every
+    \`preference\` value ('all' / 'eoaOnly' / 'smartWalletOnly'), since
+    \`preference\` only changes what's offered *inside* that popup, not
+    whether it opens. Telegram's webview never preserves \`window.opener\`
+    on popups, so this connector was moved out of the Telegram-facing
+    wallet group entirely in
+    \`telegram-app/components/Providers.tsx\`. Coinbase Wallet mobile app
+    is still reachable inside Telegram -- through the WalletConnect
+    button, which uses real deep links instead of a popup.
+
+  \`Providers.tsx\` now lists only WalletConnect under "Recommended in
+  Telegram" (it deep-links to the user's mobile wallet app -- MetaMask,
+  Trust, Rainbow, Coinbase Wallet, etc. -- and back into Telegram), with
+  MetaMask/Coinbase/Rainbow/Trust's own connectors as a secondary "More
+  wallets" group for anyone opening the Mini App in a regular desktop
+  browser tab instead, where popups and custom schemes work normally.
 - The current deployment (\`0x555b...\`) is funded (0.0006 ETH) but has
   **0 players joined** -- it is a clean slate, ready for a real game.
   Nobody needs to pre-fund anything further for a small game; \`deckFee\`
