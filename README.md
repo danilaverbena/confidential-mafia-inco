@@ -133,18 +133,28 @@ PLAN.md           Full strategy/architecture writeup.
     \`preference\` value ('all' / 'eoaOnly' / 'smartWalletOnly'), since
     \`preference\` only changes what's offered *inside* that popup, not
     whether it opens. Telegram's webview never preserves \`window.opener\`
-    on popups, so this connector was moved out of the Telegram-facing
-    wallet group entirely in
-    \`telegram-app/components/Providers.tsx\`. Coinbase Wallet mobile app
-    is still reachable inside Telegram -- through the WalletConnect
-    button, which uses real deep links instead of a popup.
+    on popups.
+  - MetaMask's own connector also can't work: \`@metamask/sdk\`'s mobile
+    deep link does \`window.location.href = "metamask://..."\` directly
+    (not \`window.open\`), and there's no reliable way to intercept or
+    rewrite a \`Location.href\` assignment the way TelegramInit.tsx
+    rewrites \`window.open\` calls elsewhere.
+  - Rainbow and Trust's own connectors share the same custom-scheme /
+    \`window.opener\` assumptions as the two above.
 
-  \`Providers.tsx\` now lists only WalletConnect under "Recommended in
-  Telegram" (it deep-links to the user's mobile wallet app -- MetaMask,
-  Trust, Rainbow, Coinbase Wallet, etc. -- and back into Telegram), with
-  MetaMask/Coinbase/Rainbow/Trust's own connectors as a secondary "More
-  wallets" group for anyone opening the Mini App in a regular desktop
-  browser tab instead, where popups and custom schemes work normally.
+  Given all four per-wallet connectors are genuinely unfixable inside
+  Telegram's webview, \`telegram-app/components/Providers.tsx\` now
+  detects Telegram at runtime (\`isInsideTelegram()\`, checking
+  \`window.Telegram.WebApp\` / \`window.TelegramWebviewProxy\`) and shows
+  an entirely different wallet list depending on it: **inside Telegram,
+  only WalletConnect is offered** (it deep-links to the user's mobile
+  wallet app -- MetaMask, Coinbase, Trust, Rainbow, etc. -- and back into
+  Telegram, and is itself Telegram-aware upstream: it detects the same
+  \`window.Telegram\` markers and forces \`_blank\` navigation instead of
+  \`_self\`, which Telegram's webview can actually hand off to the OS).
+  **Outside Telegram** (a normal desktop browser tab), the full wallet
+  list -- WalletConnect, Coinbase, MetaMask, Rainbow, Trust -- is shown as
+  before, since extensions/popups/custom schemes all work fine there.
 - The current deployment (\`0x555b...\`) is funded (0.0006 ETH) but has
   **0 players joined** -- it is a clean slate, ready for a real game.
   Nobody needs to pre-fund anything further for a small game; \`deckFee\`
