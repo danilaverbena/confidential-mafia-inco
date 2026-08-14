@@ -131,6 +131,15 @@ contract ConfidentialMafia is ConfidentialDeck {
         return euint256.unwrap(roleOf[msg.sender]);
     }
 
+    /// @notice A seat's role handle -- opaque to everyone until that role is
+    /// actually revealed (on death). Needed so the frontend/orchestrator can
+    /// fetch the attested reveal for a dead player's role by handle; reading
+    /// this for a LIVING player's address returns a handle nobody but that
+    /// player can decrypt, same as before.
+    function roleHandleOf(address who) external view returns (bytes32) {
+        return euint256.unwrap(roleOf[who]);
+    }
+
     function playerCount() external view returns (uint256) {
         return players.length;
     }
