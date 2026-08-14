@@ -109,11 +109,20 @@ PLAN.md           Full strategy/architecture writeup.
 
 ### Still needed from you
 
-- **WalletConnect Project ID** (free, cloud.walletconnect.com) -- the live
-  Mini App currently runs on a placeholder value in Vercel's project env
-  vars, so wallet connect will not work for real players until this is
-  set. Swap it into the \`NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID\` Vercel env
-  var and redeploy.
+- [x] **WalletConnect Project ID** is set in Vercel's project env vars
+  (confirmed: the production build no longer logs the "missing project
+  id" warning). Wallet connect is live for real players.
+- [x] **Wallet list tuned for the Telegram webview.** Telegram's own
+  built-in "Wallet" (Settings > Wallet / \`@wallet\` bot) runs on TON, not
+  EVM -- it has no way to sign a Base Sepolia transaction, so it cannot
+  literally appear as a connector here. What *does* work well inside the
+  Mini App's in-app browser is WalletConnect (deep-links out to the
+  user's mobile wallet app and back into Telegram) and Coinbase Wallet's
+  passkey-based Smart Wallet (no extension or separate app needed).
+  \`telegram-app/components/Providers.tsx\` now lists those two first,
+  under "Recommended in Telegram", with MetaMask/Rainbow/Trust as a
+  secondary "More wallets" group for anyone opening the Mini App in a
+  regular desktop browser tab instead.
 - The current deployment (\`0x555b...\`) is funded (0.0006 ETH) but has
   **0 players joined** -- it is a clean slate, ready for a real game.
   Nobody needs to pre-fund anything further for a small game; \`deckFee\`
