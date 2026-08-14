@@ -17,6 +17,7 @@ import {
 } from "@rainbow-me/rainbowkit/wallets";
 import { ThemeProvider } from "next-themes";
 import { activeChain } from "@/lib/network";
+import { isInsideTelegram } from "@/lib/telegram";
 
 const queryClient = new QueryClient();
 
@@ -56,15 +57,19 @@ const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "";
 // hidden rather than shown-and-broken. Outside Telegram (a normal desktop
 // browser tab, e.g. testing locally), the full wallet list is shown, since
 // browser extensions, popups and custom schemes all work normally there.
-function isInsideTelegram(): boolean {
-  if (typeof window === "undefined") return false;
-  const w = window as unknown as {
-    Telegram?: { WebApp?: unknown };
-    TelegramWebviewProxy?: unknown;
-  };
-  return Boolean(w.Telegram?.WebApp || w.TelegramWebviewProxy);
-}
-
+//
+// Even WalletConnect itself can silently fail inside Telegram's embedded
+// webview: its connect flow generates a pairing URI over an async relay
+// round-trip *before* calling window.open with the resulting deep link, so
+// by the time that call happens it can fall outside the "direct user
+// gesture" window some webviews require to allow window.open/navigation at
+// all -- Telegram's own webview appears to be one of them, closing the
+// RainbowKit modal (as if it were about to hand off to a deep link) with no
+// visible error. There's no reliable fix from inside the embedded webview
+// for that -- see the "Open in browser" fallback wired into
+// components/ConnectWallet.tsx, which reopens the page via
+// Telegram.WebApp.openLink() in a real external browser tab (Chrome Custom
+// Tab / Safari View Controller), where none of the above restrictions apply.
 const connectors = projectId
   ? connectorsForWallets(
       isInsideTelegram()
