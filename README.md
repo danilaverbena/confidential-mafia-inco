@@ -65,6 +65,21 @@ PLAN.md           Full strategy/architecture writeup.
       `ConfidentialMafia` contract with the full join -> role -> night ->
       resolve/settle -> day -> resolve/settle -> game-over loop. Builds
       clean (`npm run build`, TypeScript strict) against the real ABI.
+- [x] **Launchable from inside Telegram**, including group chats:
+      `@incoprotocol_bot`'s Main Mini App is configured in BotFather
+      (Bot Settings > Mini App App URL ->
+      `https://confidential-mafia-inco.vercel.app/confidential-mafia`,
+      Mode: Fullsize). Open it with
+      `https://t.me/incoprotocol_bot?startapp` -- posted this way, it
+      launches in the *current* chat (group or private), which is what
+      gives the Mini App `chat_type`/`chat_instance` for multiplayer.
+      (An `inline_keyboard` button with `web_app` was tried first for a
+      one-tap launch directly from a bot message in the group --
+      Telegram's Bot API rejects that outside private chats
+      (`BUTTON_TYPE_INVALID`), so the plain `?startapp` link is the
+      correct mechanism for groups, not a bug in our setup.)
+      The default chat menu button (`setChatMenuButton`, no `chat_id`)
+      is also set to the same URL for 1:1 chats with the bot.
 - [x] Telegram bot menu button wired to the live Mini App
       (`@incoprotocol_bot`, "Play Mafia").
 - [x] Backend orchestrator **live** on the server: watches
