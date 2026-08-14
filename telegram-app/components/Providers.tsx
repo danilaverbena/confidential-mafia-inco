@@ -30,9 +30,16 @@ const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "";
 //   - WalletConnect: deep-links out to the user's mobile wallet app (MetaMask,
 //     Trust, Rainbow, etc.) and back into Telegram -- the standard way to
 //     connect a real wallet from inside any in-app browser, Telegram included.
-//   - Coinbase Wallet: supports its passkey-based Smart Wallet, which needs no
-//     extension and no separate app, so it "just works" inside the Telegram
-//     webview.
+//   - Coinbase Wallet: forced to `preference: 'eoaOnly'` below. By default
+//     ('all') it first tries its passkey-based Smart Wallet, which opens a
+//     keys.coinbase.com popup that talks back to the page via
+//     `window.opener` -- Telegram's Android webview doesn't preserve that
+//     opener reference (COOP-style isolation), so the popup fails with
+//     "This app doesn't support smart wallets". Forcing `eoaOnly` skips that
+//     popup entirely and goes straight to the classic Coinbase Wallet
+//     app/extension flow (cbwallet:// deep link, rewritten to its https
+//     universal link by TelegramInit.tsx), which works fine in-webview.
+coinbaseWallet.preference = "eoaOnly";
 // Extension-only connectors (plain injected MetaMask, Rainbow, Trust as browser
 // extensions) are kept as a secondary group since they only function when the
 // Mini App happens to be opened in a desktop browser tab instead of Telegram's
