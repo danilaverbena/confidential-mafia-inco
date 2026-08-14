@@ -66,9 +66,13 @@ contract ConfidentialMafia is ConfidentialDeck {
     mapping(uint16 => euint256) private killWeight; // per player-index, encrypted
     mapping(uint16 => ebool) private protectFlag;    // per player-index, encrypted
 
-    euint256 private pendingVictimIndexHandle;
-    euint256 private pendingDeathFlagHandle; // 0/1 as euint256 (see settleNight)
-    address private pendingDeadPlayer;
+    // Public so the frontend/orchestrator can read the handles to fetch
+    // their attested reveal (@inco/lightning-js zap.attestedReveal) without
+    // needing a bespoke view function or parsing the NightResolving/
+    // DayLynchResolving event logs.
+    euint256 public pendingVictimIndexHandle;
+    euint256 public pendingDeathFlagHandle; // 0/1 as euint256 (see settleNight)
+    address public pendingDeadPlayer;
 
     // ── Day vote state (reset every day) -------------------------------------
     mapping(address => bool) public hasVotedDay;

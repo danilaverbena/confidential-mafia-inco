@@ -37,3 +37,4 @@ coverage/
 # vercel cli
 .vercel
 .env*
+!.env.example

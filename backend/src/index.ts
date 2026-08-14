@@ -34,6 +34,10 @@ async function main() {
   client.watchContractEvent({
     address,
     abi: confidentialMafiaAbi,
+    poll: true,
+    pollingInterval: 5_000, // eth_getLogs polling -- avoids eth_newFilter/
+    // eth_getFilterChanges, which break against load-balanced public RPCs
+    // that don't share filter state across nodes ("filter not found").
     onLogs: async (logs) => {
       for (const log of logs as Array<typeof logs[number] & { eventName?: string; args?: Record<string, unknown> }>) {
         console.log("event:", log.eventName, log.args);
@@ -72,6 +76,13 @@ async function main() {
     onError: (err) => console.error("watchContractEvent error:", err),
   });
 }
+
+// Log and keep running instead of crashing the whole orchestrator on a
+// stray unhandled rejection (e.g. a transient RPC hiccup somewhere we
+// did not wrap in try/catch).
+process.on("unhandledRejection", (err) => {
+  console.error("unhandledRejection (continuing):", err);
+});
 
 main().catch((err) => {
   console.error(err);
