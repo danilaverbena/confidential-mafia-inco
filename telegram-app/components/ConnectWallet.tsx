@@ -1,24 +1,59 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useConnect, type Connector } from "wagmi";
 import { isInsideTelegram, openCurrentPageInExternalBrowser } from "@/lib/telegram";
+
+/** RainbowKit registers *two* WalletConnect connectors: its own (which renders
+ * RainbowKit's in-page QR modal, `showQrModal: false`) and one that opens the
+ * official WalletConnect/Reown modal (`showQrModal: true`, tagged
+ * `rkDetails.isWalletConnectModalConnector`).
+ *
+ * That distinction is the whole fix for Telegram. RainbowKit's own modal is not
+ * Telegram-aware: it opens wallet links with the default target, which
+ * Telegram's embedded webview silently refuses, so the modal just closes and
+ * nothing happens. The official Reown modal *is* Telegram-aware -- see
+ * `@reown/appkit-controllers`' CoreHelperUtil: `isTelegram()` checks
+ * `window.TelegramWebviewProxy` / `window.Telegram`, and
+ * `getOpenTargetForPlatform()` forces `_blank` for it, which Telegram's webview
+ * does hand off to the OS correctly.
+ *
+ * So inside Telegram we bypass RainbowKit's modal entirely and connect straight
+ * to this connector. */
+// Matched on the rkDetails flag alone, deliberately not also on `id`:
+// scripts/wc-connector-check.mjs verifies this flag is set on exactly one
+// registered connector, and the connector's `id` is resolved by wagmi at
+// runtime and isn't reliably "walletConnect" at the point we inspect it.
+function findWalletConnectModalConnector(connectors: readonly Connector[]) {
+  return connectors.find(
+    (c) =>
+      (c as Connector & { rkDetails?: { isWalletConnectModalConnector?: boolean } }).rkDetails
+        ?.isWalletConnectModalConnector === true
+  );
+}
 
 // Terminal-styled connect button with an explicit wrong-network state, instead
 // of RainbowKit's default widget. Uses ConnectButton.Custom render props.
-//
-// Every wallet-connect path we tried inside Telegram's own embedded Mini App
-// webview turned out to be broken in a way that can't be configured around
-// (see the long comment in Providers.tsx): per-wallet deep links use a
-// custom URL scheme the webview can't navigate to, Coinbase's connector
-// needs a popup with `window.opener` the webview doesn't preserve, and even
-// WalletConnect's own deep link can get built too late to still count as a
-// "direct user gesture", which the webview silently drops. So alongside the
-// normal connect button, we show an explicit "Open in browser" escape hatch
-// when running inside Telegram -- it reopens this same page in a real
-// external browser tab via Telegram.WebApp.openLink(), where none of those
-// restrictions apply and every wallet (including the per-wallet buttons
-// hidden here) works normally.
 export function ConnectWallet() {
+  const { connect, connectors, isPending, error } = useConnect();
+  // Telegram detection must happen after mount -- window.Telegram is injected by
+  // the SDK script, so evaluating it during SSR/first render would always be
+  // false and produce a hydration mismatch.
+  const [inTelegram, setInTelegram] = useState(false);
+  useEffect(() => setInTelegram(isInsideTelegram()), []);
+
+  const onTelegramConnect = () => {
+    const wc = findWalletConnectModalConnector(connectors);
+    if (wc) {
+      connect({ connector: wc });
+    } else {
+      // Shouldn't happen (Providers always registers walletConnectWallet), but
+      // if it ever does, the external browser still works.
+      openCurrentPageInExternalBrowser();
+    }
+  };
+
   return (
     <div className="flex flex-col items-end gap-2">
       <ConnectButton.Custom>
@@ -32,10 +67,11 @@ export function ConnectWallet() {
             >
               {!connected ? (
                 <button
-                  onClick={openConnectModal}
-                  className="border-2 border-primary px-3 py-2 text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+                  onClick={inTelegram ? onTelegramConnect : openConnectModal}
+                  disabled={isPending}
+                  className="border-2 border-primary px-3 py-2 text-primary transition-colors hover:bg-primary hover:text-primary-foreground disabled:opacity-50"
                 >
-                  connect wallet
+                  {isPending ? "connecting..." : "connect wallet"}
                 </button>
               ) : chain.unsupported ? (
                 <button
@@ -65,7 +101,15 @@ export function ConnectWallet() {
         }}
       </ConnectButton.Custom>
 
-      {isInsideTelegram() && (
+      {/* Surface connect errors -- inside Telegram these were previously
+          swallowed entirely, which is why it looked like "nothing happens". */}
+      {error && (
+        <p className="max-w-[14rem] text-right text-[10px] leading-tight text-destructive">
+          {error.message}
+        </p>
+      )}
+
+      {inTelegram && (
         <button
           onClick={openCurrentPageInExternalBrowser}
           className="text-[10px] uppercase tracking-wide text-muted-foreground underline underline-offset-2 hover:text-primary"
