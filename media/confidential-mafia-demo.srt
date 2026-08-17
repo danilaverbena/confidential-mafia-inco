@@ -1,0 +1,81 @@
+1
+00:00:00,000 --> 00:00:05,911
+Confidential Mafia is social deduction played on Base, where the chain itself cannot spoil the
+secret.
+
+2
+00:00:06,011 --> 00:00:15,847
+Mafia only works if nobody knows who the Mafia is. On a public blockchain, that's the hard part.
+Every transaction is visible, so a naive on-chain Mafia leaks the whole game.
+
+3
+00:00:15,947 --> 00:00:23,204
+We solve that with Inco Lightning. Players join a lobby with their wallet, and roles are dealt
+as encrypted values that live on Inco.
+
+4
+00:00:23,304 --> 00:00:33,035
+Each player can decrypt exactly one thing: their own role. Inco's per-handle access control
+enforces it, so no server, no operator, and no other player can read it.
+
+5
+00:00:33,135 --> 00:00:42,390
+Here the app fetches this player's encrypted role handle from the contract, and runs an attested
+decrypt signed by the player's own key. The role appears only in this browser.
+
+6
+00:00:42,490 --> 00:00:49,795
+Now the core idea. At night, every living player sends the exact same transaction: submit night
+action, with a target.
+
+7
+00:00:49,895 --> 00:00:58,139
+Nothing on chain distinguishes a Mafia kill from a Doctor save from a Villager doing nothing at
+all. The contract works it out entirely under encryption.
+
+8
+00:00:58,239 --> 00:01:09,630
+It compares the encrypted role against the Mafia and Doctor thresholds, then uses encrypted
+select to add a kill weight, or to raise a protection flag. No branch ever reveals which one
+happened.
+
+9
+00:01:09,730 --> 00:01:18,277
+Resolution folds every target with an encrypted running maximum, and computes whether the victim
+dies, accounting for the Doctor's protection, still fully encrypted.
+
+10
+00:01:18,377 --> 00:01:29,966
+Only two values are ever revealed per night: which player was hit, and whether anyone actually
+died. Those come back as a covalidator-signed attestation, verified on chain before the contract
+will accept them.
+
+11
+00:01:30,066 --> 00:01:38,612
+A player's role becomes public only when they die. Everyone still alive stays encrypted, which
+is what lets the game decide a winner without exposing the survivors.
+
+12
+00:01:38,712 --> 00:01:46,086
+By day, voting is deliberately public, because arguing about a visible vote is the fun part. The
+night is what has to stay secret.
+
+13
+00:01:46,186 --> 00:01:56,289
+A Gemini narrator posts the story to the Telegram group between phases. It receives a public-
+events-only type, so it is structurally incapable of leaking a role it was never given.
+
+14
+00:01:56,389 --> 00:02:08,581
+Gemini also plays. These are real AI players with their own wallets, and they run under the same
+constraint as humans: each can decrypt only its own role, and reasons about everyone else from
+public state alone.
+
+15
+00:02:08,681 --> 00:02:14,023
+That means a game can start even without a full lobby, and the AI is never privileged over you.
+
+16
+00:02:14,123 --> 00:02:24,667
+Everything you just saw is live on Base Sepolia, in a Telegram Mini App, with real Inco
+attestations. Hidden roles, hidden night actions, and an AI that doesn't know the answer either.
